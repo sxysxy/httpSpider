@@ -63,22 +63,22 @@ int request(char *host, char *path, int port, char *buffer, int maxb)
     sokad.sin_port = htons(port);
     if((sokad.sin_addr.s_addr = inet_addr(host)) == INADDR_NONE)
     {
-        puts("ipæ— æ•ˆï¼Œå…·ä½“ä¿¡æ¯å·²è¾“å…¥æ—¥å¿—");
-        fprintf(flog, "-- ipæ— æ•ˆï¼Œå…·ä½“ä¿¡æ¯:\n  ä¸»æœº:%s èµ„æº:%s ç«¯å£:%d\n\n", host, path, port);
+        puts("ipÎŞĞ§£¬¾ßÌåĞÅÏ¢ÒÑÊäÈëÈÕÖ¾");
+        fprintf(flog, "-- ipÎŞĞ§£¬¾ßÌåĞÅÏ¢:\n  Ö÷»ú:%s ×ÊÔ´:%s ¶Ë¿Ú:%d\n\n", host, path, port);
         return -1;
     }
 	
     if((sokfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     {
-        puts("åˆ›å»ºsocketæè¿°ç¬¦å¤±è´¥ï¼Œå…·ä½“ä¿¡æ¯å·²è¾“å…¥æ—¥å¿—");
-        fprintf(flog, "-- åˆ›å»ºsocketæè¿°ç¬¦å¤±è´¥ï¼Œå…·ä½“ä¿¡æ¯:\n  ä¸»æœº:%s èµ„æº:%s ç«¯å£:%d\n\n", host, path, port);
+        puts("´´½¨socketÃèÊö·ûÊ§°Ü£¬¾ßÌåĞÅÏ¢ÒÑÊäÈëÈÕÖ¾");
+        fprintf(flog, "-- ´´½¨socketÃèÊö·ûÊ§°Ü£¬¾ßÌåĞÅÏ¢:\n  Ö÷»ú:%s ×ÊÔ´:%s ¶Ë¿Ú:%d\n\n", host, path, port);
         return -1;
     }
     
     if(connect(sokfd, (struct sockaddr *)&sokad, sizeof(sokad)) < 0)
     {
-        puts("è¿æ¥å¤±è´¥ï¼Œå…·ä½“ä¿¡æ¯å·²è¾“å…¥æ—¥å¿—");
-        fprintf(flog, "-- è¿æ¥å¤±è´¥ï¼Œå…·ä½“ä¿¡æ¯:\n  ä¸»æœº:%s èµ„æº:%s ç«¯å£:%d\n\n", host, path, port);
+        puts("Á¬½ÓÊ§°Ü£¬¾ßÌåĞÅÏ¢ÒÑÊäÈëÈÕÖ¾");
+        fprintf(flog, "-- Á¬½ÓÊ§°Ü£¬¾ßÌåĞÅÏ¢:\n  Ö÷»ú:%s ×ÊÔ´:%s ¶Ë¿Ú:%d\n\n", host, path, port);
     }
     char *rqbuf = (char *)malloc(sizeof(char) * 512);
     sdlen = sprintf(rqbuf, httpHeader, path);
@@ -89,19 +89,40 @@ int request(char *host, char *path, int port, char *buffer, int maxb)
     rlen = recv(sokfd, buffer, maxb, 0);
     if(rlen < 0)
     {
-        puts("æ¥æ”¶æ•°æ®å¤±è´¥ï¼Œå…·ä½“ä¿¡æ¯å·²è¾“å…¥æ—¥å¿—");
-        fprintf(flog, "-- æ¥æ”¶æ•°æ®å¤±è´¥ï¼Œå…·ä½“ä¿¡æ¯:\n  ä¸»æœº:%s èµ„æº:%s ç«¯å£:%d\n\n", host, path, port);
+        puts("½ÓÊÕÊı¾İÊ§°Ü£¬¾ßÌåĞÅÏ¢ÒÑÊäÈëÈÕÖ¾");
+        fprintf(flog, "-- ½ÓÊÕÊı¾İÊ§°Ü£¬¾ßÌåĞÅÏ¢:\n  Ö÷»ú:%s ×ÊÔ´:%s ¶Ë¿Ú:%d\n\n", host, path, port);
         return -1;
     }
     close(sokfd);
     return rlen;
 }
 
-void attachPlug()
+void attachPlug(spiderPlug *p, spider *sp)
 {
-    
+    #ifdef _WIN32
+    HINSTANCE hlib = LoadLibrary(p -> plug);
+    if(!hlib)
+    {
+        puts("¼ÓÔØÍâ¹ÒdllÊ§°Ü");
+        fprintf(flog, "-- ¼ÓÔØÍâ¹ÒdllÊ§°Ü, ¾ßÌåĞÅÏ¢:\n dllÂ·¾¶:%s\n\n", p -> plug);
+        //not return, just a warning
+    }
+    if(!(sp -> analyzer = (analyzerType)GetProcAddress(hlib, "analyzer")))
+    {
+        puts("¾¯¸æ:ÕÒ²»µ½Íâ¹ÒdllÖĞµÄ·ÖÎöº¯Êıanalyzer");
+        fprintf(flog, "-- ¾¯¸æ:ÕÒ²»µ½Íâ¹ÒdllÖĞµÄ·ÖÎöº¯Êıanalyzer:\n dllÂ·¾¶:%s\n\n", p -> plug);
+    }
+    p -> attached = true;
+    #endif
 }
-void detachPlug()
+void detachPlug(spiderPlug *p)
+{
+    #ifdef _WIN32
+    
+    #endif
+}
+
+void bfs(spider *sp)
 {
     
 }
@@ -112,11 +133,13 @@ int main()
     initSocket();
     #endif
     initSpider(); 
-    
-    attachPlug();
-    
-    detachPlug();
 	
+    spider sp;
+    spiderPlug pg;
+    memset(&pg, 0, sizeof(spiderPlug));
+    memset(&sp, 0, sizeof(spider));
+    attachPlug(&pg, &sp);
+    
     termSpider();
     #ifdef _WIN32
     cleanSocket();
