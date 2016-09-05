@@ -101,16 +101,17 @@ void attachPlug(spiderPlug *p, spider *sp)
 {
     #ifdef _WIN32
     HINSTANCE hlib = LoadLibrary(p -> plug);
+    p -> nativePointer = (long)hlib;
     if(!hlib)
     {
         puts("加载外挂dll失败");
         fprintf(flog, "-- 加载外挂dll失败, 具体信息:\n dll路径:%s\n\n", p -> plug);
         //not return, just a warning
     }
-    if(!(sp -> analyzer = (analyzerType)GetProcAddress(hlib, "analyzer")))
+    if(!(sp -> analyzer = (analyzerType)GetProcAddress(hlib, p -> func)))
     {
-        puts("警告:找不到外挂dll中的分析函数analyzer");
-        fprintf(flog, "-- 警告:找不到外挂dll中的分析函数analyzer:\n dll路径:%s\n\n", p -> plug);
+        printf("警告:找不到外挂dll中的分析函数%s\n", p -> func);
+        fprintf(flog, "-- 警告:找不到外挂dll中的分析函数%s:\n dll路径:%s\n\n",p -> func, p -> plug);
     }
     p -> attached = true;
     #endif
@@ -118,10 +119,11 @@ void attachPlug(spiderPlug *p, spider *sp)
 void detachPlug(spiderPlug *p)
 {
     #ifdef _WIN32
-    
+    free((HINSTANCE)p -> nativePointer);
     #endif
 }
 
+//核心的搜索部分
 void bfs(spider *sp)
 {
     
@@ -136,10 +138,19 @@ int main()
 	
     spider sp;
     spiderPlug pg;
+    
     memset(&pg, 0, sizeof(spiderPlug));
     memset(&sp, 0, sizeof(spider));
+    strcpy(pg.func, "analyzer");
+    strcpy(pg.plug, "plugin.dll");
     attachPlug(&pg, &sp);
     
+    // -----实验阶段
+    strcpy(sp.host, "115.28.164.3");
+    sp.port = 80;
+    bfs(&sp);
+    
+    detachPlug(&pg);
     termSpider();
     #ifdef _WIN32
     cleanSocket();

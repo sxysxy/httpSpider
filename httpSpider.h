@@ -22,7 +22,9 @@ typedef struct spiderType
 typedef struct spiderPlugType
 {
     char plug[PLUG_MAXLEN];
+    char func[PLUG_MAXLEN];
     bool attached;
+    long nativePointer;
 }spiderPlug;
 
 #endif
