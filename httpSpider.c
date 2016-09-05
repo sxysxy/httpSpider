@@ -123,10 +123,32 @@ void detachPlug(spiderPlug *p)
     #endif
 }
 
+//36277是一个质数
+#define HASHMAX 36277     
+int ELFHash(char *str)
+{
+    unsigned h = 0, x = 0;
+    while(*str)
+    {
+        h = (h << 4) + (*str++);
+        if((x = h & 0xF0000000L) != 0)
+        {
+            h ^= (x >> 24);
+            h &= ~x;
+        }
+    }
+    return h % HASHMAX;
+}
+
 //核心的搜索部分
+#define BUF_MAXSZ 100000
 void bfs(spider *sp)
 {
+    char *data = (char *)malloc(sizeof(char) * BUF_MAXSZ);
     
+    
+     
+    free(data);
 }
 
 int main()
@@ -149,6 +171,7 @@ int main()
     strcpy(sp.host, "115.28.164.3");
     sp.port = 80;
     bfs(&sp);
+    //-------
     
     detachPlug(&pg);
     termSpider();
