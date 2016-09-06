@@ -133,8 +133,15 @@ void bfs(spider *sp)
     puts("开始搜索");
     fprintf(flog, "-- 开始搜索\n\n");
     
-    
+    linkQueue q;
+    initQueue(&q); 
+    pushQueue(&q, (ansiString){"/", 1});   //从根目录开始搜
+    while(q.size > 0)
+    {
+        
+    }
      
+    destroyQueue(&q);
     free(data);
 }
 
