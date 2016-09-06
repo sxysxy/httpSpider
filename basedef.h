@@ -1,11 +1,19 @@
 #ifndef BASEDEF_H
 #define BASEDEF_H
 #include <string.h>
+#ifndef __cplusplus
+typedef enum boolType
+{
+    false,
+    true
+}bool;
+#endif
 
 typedef struct ansiStringType
 {
     char *buffer;
     int length;
+    bool freeable;
 }ansiString;
 typedef ansiString elemType;
 
@@ -17,14 +25,16 @@ void initAnsiString(ansiString *str, char *w)
     for(int i = 0; i < l; i++)
         str -> buffer[i] = w[i];
     str -> buffer[l] = 0;
+    str -> freeable = true;
 }
 void destroyAnsiString(ansiString *str)
 {
-    free(str -> buffer);
+    if(str -> freeable)
+        free(str -> buffer);
 }
 void destroyAnsiStringPtr(ansiString **str)
 {
-    free((*str) -> buffer);
+    destroyAnsiString(*str);
     free(*str);
     *str = NULL;
 }

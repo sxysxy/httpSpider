@@ -1,15 +1,7 @@
 #ifndef HTTPSPIDER_H
 #define HTTPSPIDER_H
-
+#include "basedef.h"
 //#include "avltree.h"
-
-#ifndef __cplusplus
-typedef enum boolType
-{
-    false,
-    true
-}bool;
-#endif
 
 //36277是一个质数
 #define HASHMAX 36277     

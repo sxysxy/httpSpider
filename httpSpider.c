@@ -135,7 +135,9 @@ void bfs(spider *sp)
     
     linkQueue q;
     initQueue(&q); 
-    pushQueue(&q, (ansiString){"/", 1});   //从根目录开始搜
+    char *_st = (char *)malloc(4);
+    strcpy(_st, "/");
+    pushQueue(&q, (ansiString){_st, 1, false});
     while(q.size > 0)
     {
         
