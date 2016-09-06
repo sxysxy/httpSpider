@@ -135,12 +135,20 @@ void bfs(spider *sp)
     
     linkQueue q;
     initQueue(&q); 
-    char *_st = (char *)malloc(4);
-    strcpy(_st, "/");
-    pushQueue(&q, (ansiString){_st, 1, false});
+    ansiString root;
+    initAnsiString(&root, "/");
+    pushQueue(&q, root);
+    
+    //还要判重，字典树先留个坑
+    
     while(q.size > 0)
     {
+        ansiString curl = popQueue(&q);
+        int len = request(sp -> host, curl.buffer, 80, data, BUF_MAXSZ);
         
+        //分析网页源代码，扩展下一层节点
+        
+        destroyAnsiString(&curl);
     }
      
     destroyQueue(&q);

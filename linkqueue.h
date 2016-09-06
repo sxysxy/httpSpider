@@ -33,6 +33,8 @@ void pushQueue(linkQueue *q, elemType s)
 void destroyQueue(linkQueue *q)
 {
     link *h = q -> head;
+    if(!h)
+        return;
     while(h -> next)
     {
         link *n = h -> next;
