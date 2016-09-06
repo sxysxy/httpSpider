@@ -14,7 +14,6 @@
 #include <sys/socket.h>
 #endif 
 #include "httpSpider.h"
-//#include "avltree.h"
 #include "linkqueue.h"
 
 #define logfile "spiderLog.txt"
@@ -130,6 +129,7 @@ void detachPlug(spiderPlug *p)
 void bfs(spider *sp)
 {
     char *data = (char *)malloc(sizeof(char) * BUF_MAXSZ);
+    char pathb[256];
     puts("开始搜索");
     fprintf(flog, "-- 开始搜索\n\n");
     
@@ -145,8 +145,37 @@ void bfs(spider *sp)
     {
         ansiString curl = popQueue(&q);
         int len = request(sp -> host, curl.buffer, 80, data, BUF_MAXSZ);
+        if(len < 0)continue;
         
         //分析网页源代码，扩展下一层节点
+        char *ps = curl.buffer;
+        for(int i = 0; i < len; i++)
+        {
+            int bk = 0;
+            if(ps[i] == '<')
+                bk++;
+            else if(ps[i] == '>')
+                bk--;
+            if(bk)      //在html的标签里面
+            {
+                if(ps[i] == 'h')                 //peek h
+                    if(ps[i+1] == 'r')           //peek r
+                        if(ps[i+2] == 'e')       //peek e
+                            if(ps[i+3] == 'f')   //peek f
+                            {
+                                i = i+4;
+                                while(ps[i++] != '=');   // href = 
+                                while(ps[i++] != '\"');  // href = "
+                                while(ps[i++] == ' ');    //忽略多余空格
+                                //找到链接
+                                int j = 0;
+                                while(ps[i++] != '\"')
+                                    pathb[j++] = ps[i];
+                                pathb[j] = 0;
+                                puts(pathb);
+                            }
+            }
+        }
         
         destroyAnsiString(&curl);
     }
