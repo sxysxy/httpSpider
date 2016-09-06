@@ -148,36 +148,42 @@ void bfs(spider *sp)
         if(len < 0)continue;
         
         //分析网页源代码，扩展下一层节点
-        char *ps = curl.buffer;
+        puts("测试输出: 当前页面的出链");
+        
+        char *ps = data;
         for(int i = 0; i < len; i++)
         {
-            int bk = 0;
-            if(ps[i] == '<')
-                bk++;
-            else if(ps[i] == '>')
-                bk--;
+            int bk = 1;
+            //if(ps[i] == '<')
+            //    bk++;
+            //else if(ps[i] == '>')
+             //   bk--;
             if(bk)      //在html的标签里面
             {
+                if(i+4 >= len)continue;
                 if(ps[i] == 'h')                 //peek h
                     if(ps[i+1] == 'r')           //peek r
                         if(ps[i+2] == 'e')       //peek e
                             if(ps[i+3] == 'f')   //peek f
                             {
                                 i = i+4;
-                                while(ps[i++] != '=');   // href = 
-                                while(ps[i++] != '\"');  // href = "
-                                while(ps[i++] == ' ');    //忽略多余空格
+                                while(ps[i] != '=')i++;
+                                while(ps[i] != '\"')i++;  // href = "
+                                i++;
+                                while(ps[i] == ' ')i++;    //忽略多余空格
+                                
                                 //找到链接
                                 int j = 0;
-                                while(ps[i++] != '\"')
-                                    pathb[j++] = ps[i];
+                                while(ps[i] != '\"')
+                                    pathb[j++] = ps[i++];
                                 pathb[j] = 0;
                                 puts(pathb);
                             }
             }
         }
-        
+        printf("页面%s 搜索完毕， 深入下一层页面");
         destroyAnsiString(&curl);
+       
     }
      
     destroyQueue(&q);
