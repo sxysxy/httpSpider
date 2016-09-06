@@ -54,5 +54,5 @@ elemType popQueue(linkQueue *q)
         return r;
     }
 }
-
+ 
 #endif
