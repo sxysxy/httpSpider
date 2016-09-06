@@ -14,6 +14,7 @@
 #include <sys/socket.h>
 #endif 
 #include "httpSpider.h"
+#include "avltree.h"
 
 #define logfile "spiderLog.txt"
 const char *httpHeader = "GET %s HTTP/1.0 \r\n" \
@@ -121,23 +122,6 @@ void detachPlug(spiderPlug *p)
     #ifdef _WIN32
     free((HINSTANCE)p -> nativePointer);
     #endif
-}
-
-//36277是一个质数
-#define HASHMAX 36277     
-int ELFHash(char *str)
-{
-    unsigned h = 0, x = 0;
-    while(*str)
-    {
-        h = (h << 4) + (*str++);
-        if((x = h & 0xF0000000L) != 0)
-        {
-            h ^= (x >> 24);
-            h &= ~x;
-        }
-    }
-    return h % HASHMAX;
 }
 
 //核心的搜索部分
