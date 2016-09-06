@@ -7,11 +7,12 @@
 #include <string.h>
 
 //来自我(sxysxy)的博客 sxysxy.org/blogs/13
-
+#include "basedef.h"
+typedef ansiString elemType;
 typedef struct _AVLNode
 {
     struct _AVLNode *left, *right;
-    int data;     //当前节点数据
+    elemType data;     //当前节点数据
     int height;   //树高，用作平衡因子
     int size;     //以当前节点为根的子树的节点数
 }AVLNode, *pNode, *AVLTree;
@@ -88,7 +89,7 @@ pNode doubleRotateRL(pNode k)
 }
 
 //插入
-pNode insert(AVLTree t, int x)
+pNode insert(AVLTree t, elemType x)
 { 
     if(!t)     //新建
     {
@@ -156,7 +157,7 @@ pNode delBalance(AVLTree t)
     return t;
 }
 //删除
-pNode delNode(AVLTree t, int x)
+pNode delNode(AVLTree t,elemType x)
 {
     if(!t)
         return t;

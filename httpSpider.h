@@ -1,7 +1,7 @@
 #ifndef HTTPSPIDER_H
 #define HTTPSPIDER_H
 
-#include "avltree.h"
+//#include "avltree.h"
 
 #ifndef __cplusplus
 typedef enum boolType
@@ -38,7 +38,7 @@ typedef struct spiderType
     char host[HOST_MAXLEN];
     int port;
     analyzerType analyzer;
-    AVLTree hashSlot[HASHMAX];
+    //AVLTree hashSlot[HASHMAX];
 }spider;
 
 #define PLUG_MAXLEN 80

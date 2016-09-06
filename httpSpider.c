@@ -14,7 +14,8 @@
 #include <sys/socket.h>
 #endif 
 #include "httpSpider.h"
-#include "avltree.h"
+//#include "avltree.h"
+#include "linkqueue.h"
 
 #define logfile "spiderLog.txt"
 const char *httpHeader = "GET %s HTTP/1.0 \r\n" \
@@ -129,6 +130,8 @@ void detachPlug(spiderPlug *p)
 void bfs(spider *sp)
 {
     char *data = (char *)malloc(sizeof(char) * BUF_MAXSZ);
+    puts("开始搜索");
+    fprintf(flog, "-- 开始搜索\n\n");
     
     
      
