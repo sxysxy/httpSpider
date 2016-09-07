@@ -229,7 +229,7 @@ void domanToIP(spider *sp)
     }
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     #ifdef _WIN32
     initSocket();
@@ -246,10 +246,16 @@ int main()
     attachPlug(&pg, &sp);
     
     // -----实验阶段
-    strcpy(sp.host, "jjq0811.com");
-    domanToIP(&sp);
-    sp.port = 80;
-    bfs(&sp);
+    if(argc > 1)
+    {
+        strcpy(sp.host, argv[1]);
+        domanToIP(&sp);
+        sp.port = 80;
+        bfs(&sp);
+    }else
+    {
+        puts("请给出链接");
+    }
     //-------
     
     detachPlug(&pg);
