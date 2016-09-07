@@ -7,11 +7,13 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
+#include <ws2tcpip.h>
 #else
 #include <unistd.h>
 #include <sys/types.h>
 #include <arap/inet.h>
 #include <sys/socket.h>
+#include <netdb.h>
 #endif 
 #include "httpSpider.h"
 #include "linkqueue.h"
@@ -53,7 +55,7 @@ typedef int SOCKET;
 #define close closesocket
 #endif
 
-int request(char *host, char *path, int port, char *buffer, int maxb)
+int request(spider *sp, char *host, char *path, int port, char *buffer, int maxb)
 {
     SOCKET sokfd;
     struct sockaddr_in sokad;
@@ -62,11 +64,17 @@ int request(char *host, char *path, int port, char *buffer, int maxb)
     memset(&sokad, 0, sizeof(sokad));
     sokad.sin_family = AF_INET;     //ipv4
     sokad.sin_port = htons(port);
-    if((sokad.sin_addr.s_addr = inet_addr(host)) == INADDR_NONE)
+    if(! sp -> ip)
     {
-        puts("ip无效，具体信息已输入日志");
-        fprintf(flog, "-- ip无效，具体信息:\n  主机:%s 资源:%s 端口:%d\n\n", host, path, port);
-        return -1;
+        if((sokad.sin_addr.s_addr = inet_addr(host)) == INADDR_NONE)
+        {
+            puts("ip无效，具体信息已输入日志");
+            fprintf(flog, "-- ip无效，具体信息:\n  主机:%s 资源:%s 端口:%d\n\n", host, path, port);
+            return -1;
+        }
+    }else
+    {
+        sokad.sin_addr.s_addr = sp -> ip;
     }
 	
     if((sokfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
@@ -125,6 +133,14 @@ void detachPlug(spiderPlug *p)
 }
 
 //核心的搜索部分
+bool processUrl(ansiString *str, char *url)
+{
+    int l = strlen(url);
+    if(l > ANSISTRING_MAXLEN) l = ANSISTRING_MAXLEN;
+    initAnsiString2(str, url, l);
+    return true;
+}
+
 #define BUF_MAXSZ 100000
 void bfs(spider *sp)
 {
@@ -144,7 +160,7 @@ void bfs(spider *sp)
     while(q.size > 0)
     {
         ansiString curl = popQueue(&q);
-        int len = request(sp -> host, curl.buffer, 80, data, BUF_MAXSZ);
+        int len = request(sp, sp -> host, curl.buffer, 80, data, BUF_MAXSZ);
         if(len < 0)continue;
         
         //分析网页源代码，扩展下一层节点
@@ -154,10 +170,10 @@ void bfs(spider *sp)
         for(int i = 0; i < len; i++)
         {
             int bk = 1;
-            //if(ps[i] == '<')
-            //    bk++;
-            //else if(ps[i] == '>')
-             //   bk--;
+            if(ps[i] == '<')
+                bk++;
+            else if(ps[i] == '>')
+                bk--;
             if(bk)      //在html的标签里面
             {
                 if(i+4 >= len)continue;
@@ -177,17 +193,40 @@ void bfs(spider *sp)
                                 while(ps[i] != '\"')
                                     pathb[j++] = ps[i++];
                                 pathb[j] = 0;
-                                puts(pathb);
+                                
+                                ansiString res;
+                                if(processUrl(&res, pathb)); //判重以及滤掉不合法的url
+                                {
+                                    puts(pathb);
+                                    pushQueue(&q, res);
+                                }
                             }
             }
         }
-        printf("页面%s 搜索完毕， 深入下一层页面");
+        printf("页面%s 搜索完毕， 深入下一层页面", curl.buffer);
         destroyAnsiString(&curl);
        
     }
      
     destroyQueue(&q);
     free(data);
+}
+
+void domanToIP(spider *sp)
+{
+    struct addrinfo *h;
+    if(getaddrinfo(sp -> host, NULL, NULL, &h))
+    {
+        printf("致命错误: 域名%s 无法识别其ip地址!\n", sp -> host);
+        fprintf(flog, "致命错误: 域名%s 无法识别其ip地址!\n\n", sp -> host);
+        exit(0);
+    }
+    else
+    {
+        //inet_ntop(AF_INET, &(((struct sockaddr_in *)(h->ai_addr))->sin_addr), sp -> host, 16);
+        //InetNtop(AF_INET, &(((struct sockaddr_in *)(h->ai_addr))->sin_addr), sp -> host, 16); 
+        sp -> ip = ((struct sockaddr_in *)(h->ai_addr))->sin_addr.s_addr;
+    }
 }
 
 int main()
@@ -207,7 +246,8 @@ int main()
     attachPlug(&pg, &sp);
     
     // -----实验阶段
-    strcpy(sp.host, "115.28.164.3");
+    strcpy(sp.host, "jjq0811.com");
+    domanToIP(&sp);
     sp.port = 80;
     bfs(&sp);
     //-------

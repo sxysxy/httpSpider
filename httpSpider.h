@@ -7,10 +7,10 @@
 typedef void (*analyzerType) (char *b, int sz);
 typedef struct spiderType
 {
-    char host[HOST_MAXLEN];
+    char host[HOST_MAXLEN];   //事实上准确的说是用户给的host....
     int port;
+    long ip;                 //ip
     analyzerType analyzer;
-    
 }spider;
 
 #define PLUG_MAXLEN 80

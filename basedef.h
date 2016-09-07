@@ -27,6 +27,15 @@ void initAnsiString(ansiString *str, char *w)
     str -> buffer[l] = 0;
     str -> freeable = true;
 }
+void initAnsiString2(ansiString *str, char *w, int l)
+{
+    str -> buffer = (char *)malloc(sizeof(char)* l + 10);
+    str -> length = l;
+    for(int i = 0; i < l; i++)
+        str -> buffer[i] = w[i];
+    str -> buffer[l] = 0;
+    str -> freeable = true;
+}
 void destroyAnsiString(ansiString *str)
 {
     if(str -> freeable)
@@ -38,5 +47,6 @@ void destroyAnsiStringPtr(ansiString **str)
     free(*str);
     *str = NULL;
 }
+#define ANSISTRING_MAXLEN 256
 
 #endif
