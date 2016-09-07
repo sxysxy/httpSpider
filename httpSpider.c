@@ -17,6 +17,7 @@
 #endif 
 #include "httpSpider.h"
 #include "linkqueue.h"
+#include "trie.h"
 
 #define logfile "spiderLog.txt"
 const char *httpHeader = "GET %s HTTP/1.0 \r\n" \
@@ -54,6 +55,20 @@ typedef int SOCKET;
 #ifdef _WIN32
 #define close closesocket
 #endif
+long getIP(const char *host)
+{
+    long r;
+    struct addrinfo *h;
+    if(getaddrinfo(host, NULL, NULL, &h))
+        return 0;
+    else
+    {
+        //inet_ntop(AF_INET, &(((struct sockaddr_in *)(h->ai_addr))->sin_addr), sp -> host, 16);
+        //InetNtop(AF_INET, &(((struct sockaddr_in *)(h->ai_addr))->sin_addr), sp -> host, 16); 
+        r = ((struct sockaddr_in *)(h->ai_addr))->sin_addr.s_addr;
+    }
+    return r;
+}
 
 int request(spider *sp, char *host, char *path, int port, char *buffer, int maxb)
 {
@@ -70,6 +85,7 @@ int request(spider *sp, char *host, char *path, int port, char *buffer, int maxb
         {
             puts("ip无效，具体信息已输入日志");
             fprintf(flog, "-- ip无效，具体信息:\n  主机:%s 资源:%s 端口:%d\n\n", host, path, port);
+            puts("已退出");
             return -1;
         }
     }else
@@ -128,16 +144,83 @@ void attachPlug(spiderPlug *p, spider *sp)
 void detachPlug(spiderPlug *p)
 {
     #ifdef _WIN32
-    free((HINSTANCE)p -> nativePointer);
+    FreeLibrary((HINSTANCE)p -> nativePointer);
     #endif
 }
 
 //核心的搜索部分
-bool processUrl(ansiString *str, char *url)
+bool processUrl(spider *sp, ansiString *ret, char *str)  //str内 存着路径
 {
-    int l = strlen(url);
-    if(l > ANSISTRING_MAXLEN) l = ANSISTRING_MAXLEN;
-    initAnsiString2(str, url, l);
+    int len = strlen(str);
+    int xlen;
+    if(len > ANSISTRING_MAXLEN) len = ANSISTRING_MAXLEN;
+    
+    char buf[ANSISTRING_MAXLEN];
+    char host[ANSISTRING_MAXLEN];
+    char *ptr;
+    buf[0] = 0;                     //标记清0
+    //
+    for(int i = 0; i <= len; i++)
+    {
+        if(i+4 < len)  //不能越界
+        {
+            if(str[i] == 'h')
+                if(str[i+1] == 't')
+                    if(str[i+2] == 't')
+                        if(str[i+3] == 'p')
+                        {
+                            i = i+4;  
+                            if(i+2 < len)
+                            {
+                                if(str[i+1] == 's')
+                                    if(str[i+2] == ':')
+                                        return false;     //不滋瓷https口啊
+                            }
+                            if(str[i] == ':')
+                            {
+                                if(i + 2 < len)
+                                {
+                                    if(str[i+1] == '/')
+                                        if(str[i+2] == '/')
+                                        {
+                                            i = i+2;
+                                            while(i < len && str[i] == ' ')i++;
+                                            int j = 0;
+                                            while(i < len && str[i] != '/') //直到找到后面第一个分隔符
+                                                host[j++] = str[i++];
+                                            host[j] = 0;
+                                            
+                                            //后面就是相对路径
+                                            j = 0;
+                                            while(i < len && j < ANSISTRING_MAXLEN)
+                                                buf[j++] = str[i++];
+                                            buf[j] = 0;
+                                            xlen = j;
+                                            break;   //完成，走人(这可是在for里面)
+                                        }
+                                }
+                            }
+                        }
+        }
+    }
+    if(buf[0])    //找到绝对路径中的相对路径
+    {
+        long tmp;
+        if((tmp = getIP(host)) != 0 && tmp != sp -> ip)return false;  //不是本网站(ip不一样)
+        ptr = buf;
+    }else
+        ptr = str;
+    int nl = strlen(ptr);
+    for(int i = nl-1; i >= 1 && ptr[i] == '/'; i--)   //去掉多余的 / 
+        ptr[i] = 0;
+    //判重
+    nl = strlen(ptr);
+    if(existWord(&sp -> slot, ptr, nl))  //这个页面去过了
+        return false;
+    initAnsiString2(ret, ptr, nl);
+    
+    
+    //initAnsiString2(ret, str, len);
     return true;
 }
 
@@ -145,14 +228,17 @@ bool processUrl(ansiString *str, char *url)
 void bfs(spider *sp)
 {
     char *data = (char *)malloc(sizeof(char) * BUF_MAXSZ);
-    char pathb[256];
+    char pathb[ANSISTRING_MAXLEN];
     puts("开始搜索");
     fprintf(flog, "-- 开始搜索\n\n");
     
     linkQueue q;
-    initQueue(&q); 
+    initQueue(&q);
+    initTrie(&sp -> slot);
+    
     ansiString root;
     initAnsiString(&root, "/");
+    insertWord(&sp -> slot, "/", 1);
     pushQueue(&q, root);
     
     //还要判重，字典树先留个坑
@@ -183,21 +269,23 @@ void bfs(spider *sp)
                             if(ps[i+3] == 'f')   //peek f
                             {
                                 i = i+4;
-                                while(ps[i] != '=')i++;
-                                while(ps[i] != '\"')i++;  // href = "
+                                while(i < len && ps[i] != '=')i++;
+                                while(i < len && ps[i] != '\"')i++;  // href = "
                                 i++;
-                                while(ps[i] == ' ')i++;    //忽略多余空格
+                                while(i < len && ps[i] == ' ')i++;    //忽略多余空格
                                 
                                 //找到链接
                                 int j = 0;
-                                while(ps[i] != '\"')
+                                while(i < len && j < ANSISTRING_MAXLEN && ps[i] != '\"')
                                     pathb[j++] = ps[i++];
                                 pathb[j] = 0;
                                 
                                 ansiString res;
-                                if(processUrl(&res, pathb)); //判重以及滤掉不合法的url
+                                if(processUrl(sp, &res, pathb)); //判重以及滤掉不合法的url
+                                //if(!existWord(&sp -> slot, pathb, j))
                                 {
                                     puts(pathb);
+                                    insertWord(&sp -> slot, pathb, j);
                                     pushQueue(&q, res);
                                 }
                             }
@@ -209,23 +297,18 @@ void bfs(spider *sp)
     }
      
     destroyQueue(&q);
+    destroyTrie(&sp -> slot);
     free(data);
 }
 
-void domanToIP(spider *sp)
+void useDomain(spider *sp)
 {
-    struct addrinfo *h;
-    if(getaddrinfo(sp -> host, NULL, NULL, &h))
+    if(!(sp -> ip = getIP(sp -> host)))
     {
         printf("致命错误: 域名%s 无法识别其ip地址!\n", sp -> host);
         fprintf(flog, "致命错误: 域名%s 无法识别其ip地址!\n\n", sp -> host);
+        puts("已退出");
         exit(0);
-    }
-    else
-    {
-        //inet_ntop(AF_INET, &(((struct sockaddr_in *)(h->ai_addr))->sin_addr), sp -> host, 16);
-        //InetNtop(AF_INET, &(((struct sockaddr_in *)(h->ai_addr))->sin_addr), sp -> host, 16); 
-        sp -> ip = ((struct sockaddr_in *)(h->ai_addr))->sin_addr.s_addr;
     }
 }
 
@@ -246,16 +329,16 @@ int main(int argc, char *argv[])
     attachPlug(&pg, &sp);
     
     // -----实验阶段
-    if(argc > 1)
-    {
-        strcpy(sp.host, argv[1]);
-        domanToIP(&sp);
+    //if(argc > 1)
+    //{
+        strcpy(sp.host, "sxysxy.org");
+        useDomain(&sp);
         sp.port = 80;
         bfs(&sp);
-    }else
-    {
+    //}else
+    //{
         puts("请给出链接");
-    }
+   // }
     //-------
     
     detachPlug(&pg);
