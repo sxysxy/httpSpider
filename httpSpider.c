@@ -151,6 +151,7 @@ void detachPlug(spiderPlug *p)
 //核心的搜索部分
 bool processUrl(spider *sp, ansiString *ret, char *str)  //str内 存着路径
 {
+    if(str[0] == '#')return false;  //肯定还是本页面...
     int len = strlen(str);
     int xlen;
     if(len > ANSISTRING_MAXLEN) len = ANSISTRING_MAXLEN;
@@ -160,7 +161,7 @@ bool processUrl(spider *sp, ansiString *ret, char *str)  //str内 存着路径
     char *ptr;
     buf[0] = 0;                     //标记清0
     //
-    for(int i = 0; i <= len; i++)
+    for(int i = 0; i < len; i++)
     {
         if(i+4 < len)  //不能越界
         {
@@ -183,7 +184,7 @@ bool processUrl(spider *sp, ansiString *ret, char *str)  //str内 存着路径
                                     if(str[i+1] == '/')
                                         if(str[i+2] == '/')
                                         {
-                                            i = i+2;
+                                            i = i+3;     //
                                             while(i < len && str[i] == ' ')i++;
                                             int j = 0;
                                             while(i < len && str[i] != '/') //直到找到后面第一个分隔符
@@ -207,19 +208,18 @@ bool processUrl(spider *sp, ansiString *ret, char *str)  //str内 存着路径
     {
         long tmp;
         if((tmp = getIP(host)) != 0 && tmp != sp -> ip)return false;  //不是本网站(ip不一样)
+        if(tmp == 0)return false;
         ptr = buf;
     }else
         ptr = str;
     int nl = strlen(ptr);
-    for(int i = nl-1; i >= 1 && ptr[i] == '/'; i--)   //去掉多余的 / 
+    for(int i = nl-1; i > 1 && ptr[i] == ' '; i--)   //去掉多余的 / 
         ptr[i] = 0;
     //判重
     nl = strlen(ptr);
-    if(existWord(&sp -> slot, ptr, nl))  //这个页面去过了
-        return false;
     initAnsiString2(ret, ptr, nl);
     
-    
+    //return !existWord(&sp -> slot, str, strlen(str));
     //initAnsiString2(ret, str, len);
     return true;
 }
@@ -248,9 +248,7 @@ void bfs(spider *sp)
         ansiString curl = popQueue(&q);
         int len = request(sp, sp -> host, curl.buffer, 80, data, BUF_MAXSZ);
         if(len < 0)continue;
-        
-        //分析网页源代码，扩展下一层节点
-        puts("测试输出: 当前页面的出链");
+        //分析网页源代码，扩展下一层节
         
         char *ps = data;
         for(int i = 0; i < len; i++)
@@ -281,17 +279,18 @@ void bfs(spider *sp)
                                 pathb[j] = 0;
                                 
                                 ansiString res;
-                                if(processUrl(sp, &res, pathb)); //判重以及滤掉不合法的url
-                                //if(!existWord(&sp -> slot, pathb, j))
+                                if(processUrl(sp, &res, pathb)); //滤掉不合法的url，这个函数好像还是有点bug但是并不影响功能...(噗)
                                 {
-                                    puts(pathb);
+                                    if(existWord(&sp -> slot, res.buffer, res.length))continue;;
+                                    fprintf(flog, "\n%s \n", res.buffer);
                                     insertWord(&sp -> slot, pathb, j);
                                     pushQueue(&q, res);
+                                    
                                 }
                             }
             }
         }
-        printf("页面%s 搜索完毕， 深入下一层页面", curl.buffer);
+        printf("页面%s 搜索完毕， 深入下一层页面\n", curl.buffer);
         destroyAnsiString(&curl);
        
     }
@@ -329,16 +328,16 @@ int main(int argc, char *argv[])
     attachPlug(&pg, &sp);
     
     // -----实验阶段
-    //if(argc > 1)
-    //{
-        strcpy(sp.host, "sxysxy.org");
+    if(argc > 1)
+    {
+        strcpy(sp.host, argv[1]);
         useDomain(&sp);
         sp.port = 80;
         bfs(&sp);
-    //}else
-    //{
+    }else
+    {
         puts("请给出链接");
-   // }
+    }
     //-------
     
     detachPlug(&pg);
