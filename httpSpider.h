@@ -1,4 +1,4 @@
-#ifndef HTTPSPIDER_H
+﻿#ifndef HTTPSPIDER_H
 #define HTTPSPIDER_H
 #include "basedef.h"
 #include "trie.h"
@@ -13,7 +13,7 @@ typedef struct spiderType
     analyzerType analyzer;
     trie slot;
 }spider;
-
+ 
 #define PLUG_MAXLEN 80
 typedef struct spiderPlugType
 {
