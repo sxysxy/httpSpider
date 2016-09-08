@@ -19,6 +19,9 @@
 #include "linkqueue.h"
 #include "trie.h"
 
+#include <setjmp.h>
+#include <signal.h>
+
 #define logfile "spiderLog.txt"
 const char *httpHeader = "GET %s HTTP/1.0 \r\n" \
              "User-Agent: Mozilla/5.0(compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0 \r\n\r\n";
@@ -36,9 +39,28 @@ void cleanSocket()
 #endif
 
 FILE *flog;
+void termSpider();
+void handler(int s)
+{
+    if(s == SIGINT)
+    {
+        puts("Interruputed");
+        fprintf(flog, "Interruputed by user\n");
+        termSpider();
+        exit(0);
+    }else if(s == SIGSEGV)
+    {
+        puts("Abort: Segmentation fault");
+        fprintf(flog, "Abort by SIGSEGV: Segmentation fault\n");
+        termSpider();
+        exit(0);
+    }
+}
 void initSpider()
 {
     flog = fopen(logfile, "w");
+    signal(SIGINT, handler);
+    signal(SIGSEGV, handler);
 }
 void termSpider()
 {
@@ -139,6 +161,8 @@ void attachPlug(spiderPlug *p, spider *sp)
         fprintf(flog, "-- 警告:找不到外挂dll中的分析函数%s:\n dll路径:%s\n\n",p -> func, p -> plug);
     }
     p -> attached = true;
+    puts("外挂dll加载成功");
+    fprintf(flog, "-- 加载外挂dll成功 %s\n\n", p -> plug);
     #endif
 }
 void detachPlug(spiderPlug *p)
@@ -282,7 +306,7 @@ void bfs(spider *sp)
                                 if(processUrl(sp, &res, pathb)); //滤掉不合法的url，这个函数好像还是有点bug但是并不影响功能...(噗)
                                 {
                                     if(existWord(&sp -> slot, res.buffer, res.length))continue;;
-                                    fprintf(flog, "\n%s \n", res.buffer);
+                                    //fprintf(flog, "\n%s \n", res.buffer);
                                     insertWord(&sp -> slot, pathb, j);
                                     pushQueue(&q, res);
                                     
@@ -290,6 +314,9 @@ void bfs(spider *sp)
                             }
             }
         }
+        if(sp -> analyzer)
+            sp -> analyzer(data, len);
+        
         printf("页面%s 搜索完毕， 深入下一层页面\n", curl.buffer);
         destroyAnsiString(&curl);
        
@@ -323,7 +350,7 @@ int main(int argc, char *argv[])
     
     memset(&pg, 0, sizeof(spiderPlug));
     memset(&sp, 0, sizeof(spider));
-    strcpy(pg.func, "analyzer");
+    strcpy(pg.func, "analyzer");     //先暂时钦定算了，以后改为读取config文件
     strcpy(pg.plug, "plugin.dll");
     attachPlug(&pg, &sp);
     
@@ -332,7 +359,7 @@ int main(int argc, char *argv[])
     {
         strcpy(sp.host, argv[1]);
         useDomain(&sp);
-        sp.port = 80;
+        sp.port = 80;          //暂时钦点为80算了
         bfs(&sp);
     }else
     {
